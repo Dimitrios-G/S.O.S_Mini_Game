@@ -1,0 +1,1143 @@
+```html
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Παιχνίδι SOS 11x11</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        .audio-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            background: #667eea;
+            color: white;
+        }
+
+        .control-btn.muted {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        .control-btn.music-off {
+            background: #fd7e14;
+            border-color: #fd7e14;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            max-width: 900px;
+            width: 90%;
+            margin: 20px auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .rules-section {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .rules-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+
+        .rules-content {
+            background: rgba(255,255,255,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .rules-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .rules-content li {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .setup-screen {
+            display: none;
+        }
+
+        .game-screen {
+            display: none;
+        }
+
+        .setup-form {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .difficulty-options {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(11, 40px);
+            grid-template-rows: repeat(11, 40px);
+            gap: 2px;
+            justify-content: center;
+            margin: 20px auto;
+            padding: 10px;
+            background: #333;
+            border-radius: 10px;
+        }
+
+        .cell {
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: #333;
+        }
+
+        .cell:hover:not(.preset) {
+            background: #f0f8ff;
+            transform: scale(1.05);
+        }
+
+        .cell.s {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .cell.o {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .cell.preset {
+            background: #ffeb3b !important;
+            color: #e65100 !important;
+            font-weight: bold;
+            cursor: not-allowed;
+            border: 3px solid #ff9800;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+        }
+
+        .sos-highlight {
+            background: #4caf50 !important;
+            color: white !important;
+            animation: highlight 0.5s ease-in-out;
+        }
+
+        @keyframes highlight {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 10px;
+        }
+
+        .player-info {
+            text-align: center;
+        }
+
+        .current-player {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 5px 0;
+        }
+
+        .letter-selector {
+            margin: 20px 0;
+        }
+
+        .letter-btn {
+            background: #fff;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .letter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .letter-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .message {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .message.winner {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            font-size: 18px;
+        }
+
+        .tie-message {
+            background: linear-gradient(45deg, #ff6b6b, #ffa726);
+            color: white;
+            font-size: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        .new-game-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .back-btn {
+            background: linear-gradient(45deg, #6c757d, #495057);
+        }
+
+        .thinking {
+            color: #ff6b6b;
+            font-style: italic;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff6b6b;
+            animation: confetti-fall 3s linear infinite;
+            pointer-events: none;
+        }
+
+        .confetti:nth-child(2n) { background: #4ecdc4; }
+        .confetti:nth-child(3n) { background: #45b7d1; }
+        .confetti:nth-child(4n) { background: #f9ca24; }
+        .confetti:nth-child(5n) { background: #6c5ce7; }
+        .confetti:nth-child(6n) { background: #a0e7e5; }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .footer {
+            background:rgb(3, 54, 54);
+            padding: 15px;
+            text-align: center;
+            width: 100%;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .footer .version {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .footer .copyright {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                width: 95%;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+                margin-bottom: 15px;
+            }
+            
+            .game-board {
+                grid-template-columns: repeat(11, 32px);
+                grid-template-rows: repeat(11, 32px);
+                gap: 1px;
+                margin: 15px auto;
+            }
+            
+            .cell {
+                font-size: 14px;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+            
+            .rules-content li {
+                font-size: 14px;
+                margin: 8px 0;
+                padding: 6px;
+            }
+            
+            .letter-btn {
+                padding: 8px 15px;
+                font-size: 16px;
+                margin: 3px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+                margin: 3px;
+            }
+            
+            .control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            .score {
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+                width: 98%;
+                border-radius: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .game-board {
+                grid-template-columns: repeat(11, 28px);
+                grid-template-rows: repeat(10, 28px);
+                gap: 1px;
+                margin: 10px auto;
+            }
+            
+            .cell {
+                font-size: 12px;
+            }
+            
+            .letter-btn {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+            
+            .btn {
+                padding: 8px 15px;
+                font-size: 12px;
+                margin: 2px;
+            }
+            
+            .game-info {
+                padding: 8px;
+            }
+            
+            .player-info {
+                font-size: 14px;
+            }
+            
+            .score {
+                font-size: 18px;
+            }
+            
+            .message {
+                padding: 8px;
+                font-size: 14px;
+                min-height: 35px;
+            }
+            
+            input, select {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            .form-group {
+                margin: 10px 0;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .game-board {
+                grid-template-columns: repeat(11, 24px);
+                grid-template-rows: repeat(10, 24px);
+            }
+            
+            .cell {
+                font-size: 10px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="audio-controls">
+        <button class="control-btn" id="muteToggle" onclick="toggleMute()" title="Σίγαση/Ενεργοποίηση ήχου">
+            🔊
+        </button>
+        <button class="control-btn" id="musicToggle" onclick="toggleMusic()" title="Μουσική On/Off">
+            🎵
+        </button>
+    </div>
+    
+    <div class="container">
+        <h1>🎮 Παιχνίδι SOS </h1>
+        
+        <div class="rules-section" id="rulesSection">
+            <h2>📋 Κανόνες Παιχνιδιού</h2>
+            <div class="rules-content">
+                <ul>
+                    <li>🎯 <strong>Στόχος:</strong> Σχηματίστε τη λέξη "SOS" οριζόντια, κάθετα ή διαγώνια</li>
+                    <li>🔄 <strong>Παιχνίδι:</strong> Οι παίκτες εναλλάσσονται γράφοντας S ή O σε κενά κελιά</li>
+                    <li>⭐ <strong>Πόντοι:</strong> Κάθε "SOS" που σχηματίζετε σας δίνει 1 πόντο</li>
+                    <li>🏆 <strong>Νίκη:</strong> Όποιος έχει περισσότερα "SOS" όταν γεμίσει το πλέγμα</li>
+                    <li>✨ <strong>Προτοποθετημένα:</strong> Υπάρχουν ήδη γράμματα στις γωνίες και στο κέντρο</li>
+                </ul>
+            </div>
+            <button class="btn" onclick="showSetup()">Συνέχεια 📁</button>
+        </div>
+        
+        <div class="setup-screen" id="setupScreen">
+            <div class="setup-form">
+                <div class="form-group">
+                    <label for="gameMode">Τρόπος Παιχνιδιού:</label>
+                    <select id="gameMode" onchange="toggleDifficulty()">
+                        <option value="player">Παίκτης vs Παίκτης</option>
+                        <option value="computer">Παίκτης vs Υπολογιστής</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="player1Name">Όνομα Παίκτη 1:</label>
+                    <input type="text" id="player1Name" placeholder="Εισάγετε όνομα παίκτη 1" value="Παίκτης 1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="player2Name">Όνομα Παίκτη 2:</label>
+                    <input type="text" id="player2Name" placeholder="Εισάγετε όνομα παίκτη 2" value="Παίκτης 2">
+                </div>
+                
+                <div class="difficulty-options" id="difficultyOptions">
+                    <div class="form-group">
+                        <label for="difficulty">Επίπεδο Δυσκολίας:</label>
+                        <select id="difficulty">
+                            <option value="easy">Εύκολο</option>
+                            <option value="medium">Μέτριο</option>
+                            <option value="hard">Δύσκολο</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="startGame()">Έναρξη Παιχνιδιού</button>
+                <button class="btn back-btn" onclick="backToRules()">Πίσω στους Κανόνες</button>
+            </div>
+        </div>
+        
+        <div class="game-screen" id="gameScreen">
+            <div class="game-info">
+                <div class="player-info">
+                    <div id="player1Info" class="current-player">
+                        <span id="player1NameDisplay">Παίκτης 1</span>
+                    </div>
+                    <div class="score">Σκορ: <span id="player1Score">0</span></div>
+                </div>
+                
+                <div class="player-info">
+                    <div id="player2Info">
+                        <span id="player2NameDisplay">Παίκτης 2</span>
+                    </div>
+                    <div class="score">Σκορ: <span id="player2Score">0</span></div>
+                </div>
+            </div>
+            
+            <div class="letter-selector">
+                <button class="letter-btn active" id="btnS" onclick="selectLetter('S')">S</button>
+                <button class="letter-btn" id="btnO" onclick="selectLetter('O')">O</button>
+            </div>
+            
+            <div class="game-board" id="gameBoard"></div>
+            
+            <div class="message" id="message">Επιλέξτε γράμμα και κάντε κλικ σε ένα κενό κελί</div>
+            
+            <div class="controls">
+                <button class="btn new-game-btn" onclick="newGame()">Νέο Παιχνίδι</button>
+                <button class="btn back-btn" onclick="backToSetup()">Πίσω στις Ρυθμίσεις</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="version">S.O.S v.01</div>
+        <div class="copyright">© Dimitrios Gallis 2025</div>
+    </footer>
+
+    <script>
+        let currentPlayer = 1;
+        let selectedLetter = 'S';
+        let board = Array(11).fill(null).map(() => Array(11).fill(''));
+        let scores = {1: 0, 2: 0};
+        let gameMode = 'player';
+        let difficulty = 'medium';
+        let playerNames = {1: 'Παίκτης 1', 2: 'Παίκτης 2'};
+        let gameEnded = false;
+        let soundEnabled = true;
+        let musicEnabled = true;
+        let backgroundMusic;
+
+        // Δημιουργία μουσικής φόντου
+        function createBackgroundMusic() {
+            if (!musicEnabled) return;
+            
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                gainNode.gain.value = 0.1;
+
+                const notes = [
+                    {freq: 523.25, duration: 0.5}, // C5
+                    {freq: 587.33, duration: 0.5}, // D5
+                    {freq: 659.25, duration: 0.5}, // E5
+                    {freq: 698.46, duration: 0.5}, // F5
+                    {freq: 783.99, duration: 0.5}, // G5
+                    {freq: 880.00, duration: 0.5}, // A5
+                    {freq: 987.77, duration: 0.5}, // B5
+                    {freq: 1046.5, duration: 1.0}  // C6
+                ];
+
+                let currentTime = audioContext.currentTime;
+                
+                function playMelody() {
+                    if (!musicEnabled) return;
+                    
+                    notes.forEach((note, index) => {
+                        const oscillator = audioContext.createOscillator();
+                        const noteGain = audioContext.createGain();
+                        
+                        oscillator.connect(noteGain);
+                        noteGain.connect(gainNode);
+                        
+                        oscillator.frequency.value = note.freq;
+                        oscillator.type = 'sine';
+                        
+                        noteGain.gain.setValueAtTime(0, currentTime + index * 0.6);
+                        noteGain.gain.linearRampToValueAtTime(0.3, currentTime + index * 0.6 + 0.05);
+                        noteGain.gain.exponentialRampToValueAtTime(0.01, currentTime + index * 0.6 + note.duration);
+                        
+                        oscillator.start(currentTime + index * 0.6);
+                        oscillator.stop(currentTime + index * 0.6 + note.duration);
+                    });
+                    
+                    setTimeout(() => {
+                        if (musicEnabled) playMelody();
+                    }, notes.length * 600 + 2000);
+                }
+                
+                playMelody();
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+
+        // Ήχοι παιχνιδιού
+        const sounds = {
+            click: () => playSound(800, 100),
+            sos: () => playSound([600, 800, 1000], 300),
+            win: () => playSound([523, 659, 784, 1047], 500),
+            tie: () => playSound([400, 500, 600], 400)
+        };
+
+        function playSound(frequency, duration) {
+            if (!soundEnabled) return;
+            
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (Array.isArray(frequency)) {
+                    frequency.forEach((freq, index) => {
+                        setTimeout(() => {
+                            const oscillator = audioContext.createOscillator();
+                            const gainNode = audioContext.createGain();
+                            
+                            oscillator.connect(gainNode);
+                            gainNode.connect(audioContext.destination);
+                            
+                            oscillator.frequency.value = freq;
+                            oscillator.type = 'sine';
+                            
+                            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+                            
+                            oscillator.start(audioContext.currentTime);
+                            oscillator.stop(audioContext.currentTime + duration / 1000);
+                        }, index * 150);
+                    });
+                } else {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + duration / 1000);
+                }
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+
+        function showSetup() {
+            document.getElementById('rulesSection').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+        }
+
+        function toggleMute() {
+            soundEnabled = !soundEnabled;
+            const muteBtn = document.getElementById('muteToggle');
+            muteBtn.textContent = soundEnabled ? '🔊' : '🔇';
+            muteBtn.classList.toggle('muted', !soundEnabled);
+        }
+
+        function toggleMusic() {
+            musicEnabled = !musicEnabled;
+            const musicBtn = document.getElementById('musicToggle');
+            musicBtn.textContent = musicEnabled ? '🎵' : '🔇';
+            musicBtn.classList.toggle('music-off', !musicEnabled);
+            
+            if (musicEnabled) {
+                createBackgroundMusic();
+            }
+        }
+
+        function toggleDifficulty() {
+            const gameMode = document.getElementById('gameMode').value;
+            const difficultyOptions = document.getElementById('difficultyOptions');
+            const player2Name = document.getElementById('player2Name');
+            
+            if (gameMode === 'computer') {
+                difficultyOptions.style.display = 'block';
+                player2Name.value = 'Υπολογιστής';
+                player2Name.disabled = true;
+            } else {
+                difficultyOptions.style.display = 'none';
+                player2Name.value = 'Παίκτης 2';
+                player2Name.disabled = false;
+            }
+        }
+
+        function startGame() {
+            gameMode = document.getElementById('gameMode').value;
+            difficulty = document.getElementById('difficulty').value;
+            playerNames[1] = document.getElementById('player1Name').value || 'Παίκτης 1';
+            playerNames[2] = document.getElementById('player2Name').value || 'Παίκτης 2';
+            
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            
+            document.getElementById('player1NameDisplay').textContent = playerNames[1];
+            document.getElementById('player2NameDisplay').textContent = playerNames[2];
+            
+            initializeGame();
+            createBackgroundMusic();
+        }
+
+        function initializeGame() {
+            currentPlayer = 1;
+            selectedLetter = 'S';
+            board = Array(11).fill(null).map(() => Array(11).fill(''));
+            scores = {1: 0, 2: 0};
+            gameEnded = false;
+            
+            // Προτοποθετημένα γράμματα: 'S' στις τέσσερις γωνίες
+            board[0][0] = 'S';     // Πάνω αριστερά
+            board[0][10] = 'S';    // Πάνω δεξιά
+            board[10][0] = 'S';    // Κάτω αριστερά
+            board[10][10] = 'S';   // Κάτω δεξιά
+
+            // Προσθήκη οριζόντιου SOS στο κέντρο
+            board[5][4] = 'S';
+            board[5][5] = 'O';
+            board[5][6] = 'S';
+            
+            createBoard();
+            updateUI();
+            updateMessage('Επιλέξτε γράμμα και κάντε κλικ σε ένα κενό κελί');
+        }
+
+        function createBoard() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            for (let row = 0; row < 11; row++) {
+                for (let col = 0; col < 11; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    if (board[row][col] !== '') {
+                        cell.textContent = board[row][col];
+                        cell.classList.add(board[row][col].toLowerCase());
+                        
+                        // Έλεγχος αν είναι προτοποποθετημένο (γωνίες ή κεντρικό SOS)
+                        if ((row === 0 && col === 0) || (row === 0 && col === 10) || 
+                            (row === 10 && col === 0) || (row === 10 && col === 10) ||
+                            (row === 5 && col === 4) || (row === 5 && col === 5) || (row === 5 && col === 6)) {
+                            cell.classList.add('preset');
+                        }
+                    }
+                    
+                    cell.addEventListener('click', () => makeMove(row, col));
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+
+        function selectLetter(letter) {
+            selectedLetter = letter;
+            document.getElementById('btnS').classList.toggle('active', letter === 'S');
+            document.getElementById('btnO').classList.toggle('active', letter === 'O');
+        }
+
+        function makeMove(row, col) {
+            if (gameEnded || board[row][col] !== '') return;
+            
+            sounds.click();
+            board[row][col] = selectedLetter;
+            
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cell.textContent = selectedLetter;
+            cell.classList.add(selectedLetter.toLowerCase());
+            
+            const sosCount = checkForSOS(row, col);
+            
+            if (sosCount > 0) {
+                // Award 1 point per turn if at least one SOS is formed, as per user's request.
+                // The '++' operator ensures only one point is added.
+                scores[currentPlayer]++; 
+                sounds.sos();
+                updateMessage(`${playerNames[currentPlayer]} σχημάτισε SOS!`); // Message updated for single point
+            } 
+
+            // IMPORTANT: Switch player AFTER processing current player's score
+            const nextPlayer = currentPlayer === 1 ? 2 : 1;
+
+            if (isBoardFull()) {
+                endGame();
+            } else {
+                currentPlayer = nextPlayer; // Switch player for the next turn
+                if (gameMode === 'computer' && currentPlayer === 2) {
+                    updateMessage(`${playerNames[1]} έπαιξε. Ο υπολογιστής σκέφτεται...`);
+                    setTimeout(computerMove, 1000);
+                } else {
+                    updateMessage(`Σειρά του ${playerNames[currentPlayer]}`);
+                }
+            }
+            
+            updateUI();
+        }
+
+        function checkForSOS(row, col) {
+            let sosCount = 0;
+            const directions = [
+                [-1, -1], [-1, 0], [-1, 1],
+                [0, -1],           [0, 1],
+                [1, -1],  [1, 0],  [1, 1]
+            ];
+            
+            // Check for SOS with the current cell as the middle 'O'
+            if (board[row][col] === 'O') {
+                for (const [dr, dc] of directions) {
+                    const r1 = row - dr, c1 = col - dc;
+                    const r2 = row + dr, c2 = col + dc;
+                    
+                    if (r1 >= 0 && r1 < 11 && c1 >= 0 && c1 < 11 &&
+                        r2 >= 0 && r2 < 11 && c2 >= 0 && c2 < 11 &&
+                        board[r1][c1] === 'S' && board[r2][c2] === 'S') {
+                        
+                        highlightSOS(r1, c1, row, col, r2, c2);
+                        sosCount++;
+                    }
+                }
+            }
+            
+            // Check for SOS with the current cell as the first 'S'
+            if (board[row][col] === 'S') {
+                for (const [dr, dc] of directions) {
+                    const r1 = row + dr, c1 = col + dc;
+                    const r2 = row + 2*dr, c2 = col + 2*dc;
+                    
+                    if (r1 >= 0 && r1 < 11 && c1 >= 0 && c1 < 11 &&
+                        r2 >= 0 && r2 < 11 && c2 >= 0 && c2 < 11 &&
+                        board[r1][c1] === 'O' && board[r2][c2] === 'S') {
+                        
+                        highlightSOS(row, col, r1, c1, r2, c2);
+                        sosCount++;
+                    }
+                }
+            }
+            
+            return sosCount;
+        }
+
+        function highlightSOS(r1, c1, r2, c2, r3, c3) {
+            const cells = [
+                document.querySelector(`[data-row="${r1}"][data-col="${c1}"]`),
+                document.querySelector(`[data-row="${r2}"][data-col="${c2}"]`),
+                document.querySelector(`[data-row="${r3}"][data-col="${c3}"]`)
+            ];
+            
+            cells.forEach(cell => {
+                cell.classList.add('sos-highlight');
+                setTimeout(() => cell.classList.remove('sos-highlight'), 2000);
+            });
+        }
+
+        function computerMove() {
+            if (gameEnded) return;
+            
+            const move = getBestMove();
+            if (move) {
+                makeMove(move.row, move.col);
+            }
+        }
+
+        function getBestMove() {
+            const emptyCells = [];
+            for (let row = 0; row < 11; row++) {
+                for (let col = 0; col < 11; col++) {
+                    if (board[row][col] === '') {
+                        emptyCells.push({row, col});
+                    }
+                }
+            }
+            
+            if (emptyCells.length === 0) return null;
+            
+            // Strategy based on difficulty
+            if (difficulty === 'easy') {
+                return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            }
+            
+            let bestMove = null;
+            let bestScore = -1; // Represents the number of SOS sequences the computer would form
+            
+            // Try to make a move that forms an SOS
+            for (const cell of emptyCells) {
+                for (const letter of ['S', 'O']) {
+                    board[cell.row][cell.col] = letter;
+                    const score = checkForSOS(cell.row, cell.col);
+                    board[cell.row][cell.col] = '';
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = {row: cell.row, col: cell.col};
+                        selectedLetter = letter;
+                    }
+                }
+            }
+            
+            // If the computer can form any SOS, it should make that move.
+            if (bestScore > 0) {
+                return bestMove;
+            }
+            
+            // If no scoring move found, for medium difficulty, make a random move
+            if (difficulty === 'medium') {
+                selectedLetter = Math.random() < 0.5 ? 'S' : 'O';
+                return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            }
+            
+            // Hard difficulty: try to block the opponent from forming an SOS
+            for (const cell of emptyCells) {
+                for (const letter of ['S', 'O']) {
+                    board[cell.row][cell.col] = letter;
+                    // Check if placing this letter would allow the *opponent* to score
+                    const opponentScore = checkForSOS(cell.row, cell.col); 
+                    board[cell.row][cell.col] = '';
+                    
+                    if (opponentScore > 0) {
+                        // If placing this letter would let the opponent score,
+                        // make this move to block them.
+                        selectedLetter = letter;
+                        return cell; 
+                    }
+                }
+            }
+            
+            // If no scoring or blocking move found, make a random move
+            selectedLetter = Math.random() < 0.5 ? 'S' : 'O';
+            return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        }
+
+
+        function updateUI() {
+            document.getElementById('player1Score').textContent = scores[1];
+            document.getElementById('player2Score').textContent = scores[2];
+            
+            document.getElementById('player1Info').classList.toggle('current-player', currentPlayer === 1);
+            document.getElementById('player2Info').classList.toggle('current-player', currentPlayer === 2);
+        }
+
+        function updateMessage(message) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = 'message info';
+            
+            if (message.includes('σχημάτισε SOS')) {
+                messageDiv.className = 'message success';
+            }
+        }
+
+        function isBoardFull() {
+            for (let row = 0; row < 11; row++) {
+                for (let col = 0; col < 11; col++) {
+                    if (board[row][col] === '') return false;
+                }
+            }
+            return true;
+        }
+
+        function endGame() {
+            gameEnded = true;
+            const messageDiv = document.getElementById('message');
+            
+            if (scores[1] > scores[2]) {
+                messageDiv.textContent = `🏆 Νικητής: ${playerNames[1]} με ${scores[1]} SOS!`;
+                messageDiv.className = 'message winner';
+                sounds.win();
+                createConfetti();
+            } else if (scores[2] > scores[1]) {
+                messageDiv.textContent = `🏆 Νικητής: ${playerNames[2]} με ${scores[2]} SOS!`;
+                messageDiv.className = 'message winner';
+                sounds.win();
+                createConfetti();
+            } else {
+                messageDiv.innerHTML = `<div class="tie-message">🤝 Ισοπαλία! Και οι δύο παίκτες έχουν ${scores[1]} SOS!</div>`;
+                sounds.tie();
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDelay = Math.random() * 3 + 's';
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        function newGame() {
+            initializeGame();
+        }
+
+        function backToSetup() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+        }
+
+        function backToRules() {
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('rulesSection').style.display = 'block';
+        }
+
+        // Initialization
+        window.addEventListener('load', () => {
+            createBackgroundMusic();
+        });
+    </script>
+</body>
+</html>
+```
