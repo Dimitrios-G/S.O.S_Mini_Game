@@ -983,10 +983,18 @@
         function computerMove() {
             if (gameEnded) return;
             
+             // Αποθήκευση του γράμματος επιλογής του παίκτη
+            const playerSelectedLetter = selectedLetter;
+
             const move = getBestMove();
             if (move) {
                 makeMove(move.row, move.col);
             }
+            // Επαναφορά της επιλογής του παίκτη
+            selectedLetter = playerSelectedLetter;
+            // Ενημέρωση των κουμπιών επιλογής γράμματος για σωστή εμφάνιση
+            document.getElementById('btnS').classList.toggle('active', selectedLetter === 'S');
+            document.getElementById('btnO').classList.toggle('active', selectedLetter === 'O');
         }
 
         function getBestMove() {
